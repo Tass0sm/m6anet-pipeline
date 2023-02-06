@@ -175,10 +175,8 @@ if( params.FPGA=="false"){
       set val(sample), file(guppy_results), val(label), file('raw_data'), file(bam_file), file(bam_index) from guppy_outputs_eventalign.join(eventalign_annot).join(minimap)
       each file(transcriptome_fasta) from transcriptome_fasta_eventalign
     output: 
-      set val(sample), val(label), file("eventalign.txt") into eventalign_collapse
-      file("alignment-summary.txt") optional true
-  
-  
+      set val(sample), val(label), file("eventalign.txt"), file("alignment-summary.txt") into eventalign_output
+
   script:
   // def cpus_each = (task.cpus/2).trunc(0)
   def cpus_each = task.cpus
@@ -192,10 +190,36 @@ if( params.FPGA=="false"){
   }
 }
 
-ni_ref=Channel.create()
-ni_other=Channel.create()
-eventalign_collapse.groupTuple(by:1)
-              .choice( ni_ref, ni_other ) { a -> a[1] == params.reference_condition ? 0 : 1 } 
+process m6anet_dataprep {
+  echo true
+  publishDir "${params.resultsDir}/${sample}/", mode: 'copy'
+  input:
+    set val(sample), val(label), file(eventalign_file), file(alignment_summary_file) from eventalign_output
+  output:
+    set val(sample), val(label), file("data.index"), file("data.json"), file("data.log"), file("data.readcount") into dataprep_output
 
-nanocompore_input=Channel.create()
-ni_ref.combine(ni_other).into(nanocompore_input)
+  script:
+  """
+  module load python
+  source activate m6anet-env
+  m6anet-dataprep --eventalign ${eventalign_file} \
+                  --readcount_max ${params.readcount_max} \
+                  --out_dir "." --n_processes ${task.cpus}
+  """
+}
+
+process m6anet_run {
+  echo true
+  publishDir "${params.resultsDir}/${sample}/", mode: 'copy'
+  input:
+    set val(sample), val(label), file(index), file(json), file(log), file(readcount) from dataprep_output
+  output:
+    set val(sample), val(label), path("data.*")
+
+  script:
+  """
+  module load python
+  source activate m6anet-env
+  m6anet-run_inference --input_dir "." --out_dir "." --infer_mod_rate --n_processes ${task.cpus}
+  """
+}

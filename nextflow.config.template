@@ -1,6 +1,6 @@
 params {
   // Path to the sample description file
-  samples = "$baseDir/test_data/samples.txt"
+  samples = "$baseDir/samples_8078.txt"
 
   // Provide either:
   //   1) transcriptome_fasta: a fasta file for the transcriptome
@@ -9,15 +9,15 @@ params {
   //   2) gtf: annotation of the transcriptome in GTF
   // If you use genome_fasta and gtf you *must*
   // set transcriptome_fasta to false.
-  transcriptome_fasta = false
+  transcriptome_fasta = "/users/PAS1405/tassosm/Desktop/common-data/RNA_section__454_9627.fasta"
 
   // Path to the Ensembl GTF file for the reference
   // This is ignored if transcriptome_fasta is provided
-  gtf = "test_data/test.gtf"
+  // gtf = "test_data/test.gtf"
 
   // Path to the reference genome fasta file
   // This is ignored if transcriptome_fasta is provided
-  genome_fasta = "test_data/chr6.fa"
+  // genome_fasta = "test_data/chr6.fa"
 
   // Path to a txt file with a list of transcript ids of 
   // interest. Only transcripts in this list will be analysed
@@ -29,21 +29,24 @@ params {
   exclude_trancripts = false
 
   // If true run pycoQC
-  qc=true
+  qc = true
 
   // If true guppy saves basecalled fast5 files
-  keep_basecalled_fast5=true
+  keep_basecalled_fast5 = true
 
   // If true skip the basecalling step
   // the data paths in the sample file must point to Guppy output dirs
-  input_is_basecalled=false
+  input_is_basecalled = false
 
   // If true save to disk the eventalign output files
   keep_eventalign_files = true
   
   // Path to a folder where to store results
-  resultsDir = "results/"
- 
+  resultsDir = "$baseDir/results/"
+
+  // m6anet-dataprep
+  readcount_max=5000
+
   // Nanocompore specific options 
   // Refer to Nanocompore documentation for info:
   // https://nanocompore.rna.rocks/
@@ -54,7 +57,7 @@ params {
   nanocompore_loglevel="debug"
 
   // This must match one of the conditions in the samples file
-  reference_condition = "WT"
+  reference_condition = "NEG"
 
   // Parameters for basecalling with Guppy
   flowcell = "FLO-MIN106"
@@ -75,7 +78,7 @@ params {
   // Guppy. Please use the Dockerfile in the repository to build
   // a suitable image.
   if(GPU == "true"){
-  	guppy_container = "genomicpariscentre/guppy-gpu:4.5.3"
+    	guppy_container = "genomicpariscentre/guppy-gpu:4.5.3"
   }
   else{
   	guppy_container = "genomicpariscentre/guppy:4.5.3"
@@ -84,19 +87,22 @@ params {
   genomicstools_container = "tleonardi/genomics_tools:1.0.1"
   minimap2_container = "tleonardi/minimap2:2.17"
   eventalign_container = "tleonardi/nanocompore:v1.0.4"
-  nanocompore_container = "tleonardi/nanocompore:v1.0.4"
 
   FPGA = "false"
 }
 
-docker.enabled = true
-// singularity.enabled = true
-// singularity.autoMounts = true
-
+// docker.enabled = true
+singularity.enabled = true
+singularity.autoMounts = true
+// singularity.runOptions = "--nv"
 
 profiles {
   standard {
     includeConfig 'conf/local.conf'
+  }
+
+  slurm {
+    includeConfig 'conf/slurm.conf'
   }
 
   lsf {
